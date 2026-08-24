@@ -1,7 +1,3 @@
-
--- example script by https://github.com/mstudio45/LinoriaLib/blob/main/Example.lua and modified by deivid
--- You can suggest changes with a pull request or something
-
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
@@ -31,18 +27,11 @@ local Window = Library:CreateWindow({
 	ShowCustomCursor = true,
 })
 
--- CALLBACK NOTE:
--- Passing in callback functions via the initial element parameters (i.e. Callback = function(Value)...) works
--- HOWEVER, using Toggles/Options.INDEX:OnChanged(function(Value) ... ) is the RECOMMENDED way to do this.
--- I strongly recommend decoupling UI code from logic code. i.e. Create your UI elements FIRST, and THEN setup :OnChanged functions later.
-
--- You do not have to set your tabs & groups up this way, just a prefrence.
--- You can find more icons in https://lucide.dev/
 local Tabs = {
 	-- Creates a new tab titled Main
 	Main = Window:AddTab("Main", "user"),
 	Key = Window:AddKeyTab("Key System"),
-	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+	Settings = Window:AddTab("Settings", "settings"),
 }
 
 
@@ -718,7 +707,7 @@ end)
 Library:AddDraggableLabel("This is a Draggable Label")
 
 -- UI Settings
-local MenuGroup = Tabs["UI Settings"]:AddGroupbox({
+local MenuGroup = Tabs.Settings:AddGroupbox({
 	Side = "Left",
 	Name = "Menu",
 	IconName = "wrench"
@@ -817,11 +806,11 @@ SaveManager:SetSubFolder("specific-place") -- if the game has multiple places in
 -- [ This is optional ]
 
 -- Builds our config menu on the right side of our tab
-SaveManager:BuildConfigSection(Tabs["UI Settings"])
+SaveManager:BuildConfigSection(Tabs.Settings)
 
 -- Builds our theme menu (with plenty of built in themes) on the left side
 -- NOTE: you can also call ThemeManager:ApplyToGroupbox to add it to a specific groupbox
-ThemeManager:ApplyToTab(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs.Settings)
 
 -- You can use the SaveManager:LoadAutoloadConfig() to load a config
 -- which has been marked to be one that auto loads!
