@@ -12041,35 +12041,24 @@ function Library:CreateWindow(WindowInfo)
         task.spawn(Library.Toggle)
     end
 
+--Mobile
     if Library.IsMobile then
-        local ToggleButton = Library:AddDraggableButton("Toggle", function()
+        local MenuButton = Library:AddDraggableButton("Menu", function()
             Library:Toggle()
         end, true, true)
 
-        local LockButton = Library:AddDraggableButton("Lock", function(self)
-            Library.CantDragForced = not Library.CantDragForced
-            self:SetText(Library.CantDragForced and "Unlock" or "Lock")
-        end, true, true)
-
         if WindowInfo.MobileButtonsSide == "Right" then
-            ToggleButton.Button.AnchorPoint = Vector2.new(1, 0)
-            ToggleButton.Button.Position = UDim2.new(1, -6, 0, 6)
-
-            LockButton.Button.AnchorPoint = Vector2.new(1, 0)
-            LockButton.Button.Position = UDim2.new(1, -(ToggleButton.Button.Size.X.Offset + 12), 0, 6)
+            MenuButton.Button.AnchorPoint = Vector2.new(1, 0)
+            MenuButton.Button.Position = UDim2.new(1, -6, 0, 6)
         else
-            ToggleButton.Button.AnchorPoint = Vector2.new(0, 0)
-            ToggleButton.Button.Position = UDim2.fromOffset(6, 6)
-
-            LockButton.Button.AnchorPoint = Vector2.new(0, 0)
-            LockButton.Button.Position = UDim2.fromOffset(ToggleButton.Button.Size.X.Offset + 12, 6)
+            MenuButton.Button.AnchorPoint = Vector2.new(0, 0)
+            MenuButton.Button.Position = UDim2.fromOffset(6, 6)
         end
 
         if WindowInfo.ShowMobileButtons == false then
-            ToggleButton.Button.Visible = false
-            LockButton.Button.Visible = false
+            MenuButton.Button.Visible = false
         end
-    end
+end
 
     --// Execution \\--
     Library:GiveSignal(SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
