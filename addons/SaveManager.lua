@@ -550,7 +550,8 @@ function SaveManager:RefreshConfigList()
             continue
         end
 
-        local NormalizedPath = RawFileName:gsub("", "/")
+        -- FIXED: Added the backslash that was stripped by the web scraper
+        local NormalizedPath = RawFileName:gsub("\\", "/")
         local FileName = NormalizedPath:match(".*/([^/]*)$")
 
         if not FileName then
@@ -987,44 +988,6 @@ function SaveManager:DeleteAutoLoadConfig()
     return true
 end
 
---// Confirmation Dialog
-local function Confirm(
-    Index: string,
-    Title: string,
-    Description: string,
-    ActionText: string,
-    Action: () -> ()
-)
-    return SaveManager.Library.Window:AddDialog(Index, {
-        Title = Title,
-        Description = Description,
-        AutoDismiss = false,
-
-        FooterButtons = {
-            Cancel = {
-                Title = "Cancel",
-                Variant = "Ghost",
-                Order = 1,
-
-                Callback = function(Dialog)
-                    Dialog:Dismiss()
-                end
-            },
-
-            Action = {
-                Title = ActionText,
-                Variant = "Destructive",
-                Order = 2,
-
-                Callback = function(Dialog)
-                    Dialog:Dismiss()
-                    Action()
-                end
-            }
-        }
-    })
-end
-
 --// Configuration UI
 function SaveManager:BuildConfigSection(Tab: any)
     assert(
@@ -1067,7 +1030,7 @@ function SaveManager:BuildConfigSection(Tab: any)
         end
     end
 
-    --// Name
+    --// 1. Name
     ConfigNameInput =
         ConfigurationBox:AddInput(
             "SaveManager_ConfigName",
@@ -1076,7 +1039,7 @@ function SaveManager:BuildConfigSection(Tab: any)
             }
         )
 
-    --// List
+    --// 2. List
     ConfigList =
         ConfigurationBox:AddDropdown(
             "SaveManager_ConfigList",
@@ -1107,56 +1070,7 @@ function SaveManager:BuildConfigSection(Tab: any)
             }
         )
 
-    --// Load
-    ConfigurationBox:AddButton(
-        "Load",
-        function()
-            local Name = ConfigList.Value
-
-            if IsStringEmpty(Name) then
-                Notify("Please select a config first.")
-                return
-            end
-
-            Confirm(
-                "SaveManager_LoadConfig",
-                "Load config",
-
-                string.format(
-                    "Are you sure you want to load %q? Your current settings will be overwritten.",
-                    Name
-                ),
-
-                "Load",
-
-                function()
-                    local Success, ErrorMessage =
-                        SaveManager:Load(Name)
-
-                    if not Success then
-                        Notify(
-                            string.format(
-                                "Failed to load config %q: %s",
-                                Name,
-                                ErrorMessage
-                            )
-                        )
-
-                        return
-                    end
-
-                    Notify(
-                        string.format(
-                            "Successfully loaded config %q",
-                            Name
-                        )
-                    )
-                end
-            )
-        end
-    )
-
-    --// Save (Creates or Overwrites)
+    --// 3. Save
     ConfigurationBox:AddButton(
         "Save",
         function()
@@ -1172,49 +1086,69 @@ function SaveManager:BuildConfigSection(Tab: any)
                 return
             end
 
-            local IsExisting = DoesConfigExist(Name)
-            local ActionText = IsExisting and "Overwrite" or "Create"
-            local Description = IsExisting 
-                and string.format("Are you sure you want to overwrite %q with your current settings?", Name)
-                or string.format("Are you sure you want to create a new config named %q?", Name)
+            local Success, ErrorMessage =
+                SaveManager:Save(Name)
 
-            Confirm(
-                "SaveManager_SaveConfig",
-                ActionText .. " config",
-                Description,
-                ActionText,
-
-                function()
-                    local Success, ErrorMessage =
-                        SaveManager:Save(Name)
-
-                    if not Success then
-                        Notify(
-                            string.format(
-                                "Failed to save config %q: %s",
-                                Name,
-                                ErrorMessage
-                            )
-                        )
-
-                        return
-                    end
-
-                    Notify(
-                        string.format(
-                            "Successfully saved config %q",
-                            Name
-                        )
+            if not Success then
+                Notify(
+                    string.format(
+                        "Failed to save config %q: %s",
+                        Name,
+                        ErrorMessage
                     )
+                )
 
-                    RefreshList()
-                    ConfigList:SetValue(Name)
-                end
+                return
+            end
+
+            Notify(
+                string.format(
+                    "Successfully saved config %q",
+                    Name
+                )
+            )
+
+            RefreshList()
+            ConfigList:SetValue(Name)
+        end
+    )
+
+    --// 4. Load
+    ConfigurationBox:AddButton(
+        "Load",
+        function()
+            local Name = ConfigList.Value
+
+            if IsStringEmpty(Name) then
+                Notify("Please select a config first.")
+                return
+            end
+
+            local Success, ErrorMessage =
+                SaveManager:Load(Name)
+
+            if not Success then
+                Notify(
+                    string.format(
+                        "Failed to load config %q: %s",
+                        Name,
+                        ErrorMessage
+                    )
+                )
+
+                return
+            end
+
+            Notify(
+                string.format(
+                    "Successfully loaded config %q",
+                    Name
+                )
             )
         end
     )
 
-    --// Delete
+    --// 5. Delete
     ConfigurationBox:AddButton(
         "Delete",
         function()
@@ -1225,48 +1159,34 @@ function SaveManager:BuildConfigSection(Tab: any)
                 return
             end
 
-            Confirm(
-                "SaveManager_DeleteConfig",
-                "Delete config",
+            local Success, ErrorMessage =
+                SaveManager:Delete(Name)
 
-                string.format(
-                    "Are you sure you want to delete %q? This cannot be undone.",
-                    Name
-                ),
-
-                "Delete",
-
-                function()
-                    local Success, ErrorMessage =
-                        SaveManager:Delete(Name)
-
-                    if not Success then
-                        Notify(
-                            string.format(
-                                "Failed to delete config %q: %s",
-                                Name,
-                                ErrorMessage
-                            )
-                        )
-
-                        return
-                    end
-
-                    Notify(
-                        string.format(
-                            "Successfully deleted config %q",
-                            Name
-                        )
+            if not Success then
+                Notify(
+                    string.format(
+                        "Failed to delete config %q: %s",
+                        Name,
+                        ErrorMessage
                     )
+                )
 
-                    RefreshList()
-                    RefreshAutoload()
-                end
+                return
+            end
+
+            Notify(
+                string.format(
+                    "Successfully deleted config %q",
+                    Name
+                )
             )
+
+            RefreshList()
+            RefreshAutoload()
         end
     )
 
-    --// Set As Autoload
+    --// 6. Set As Autoload
     ConfigurationBox:AddButton(
         "Set As Autoload",
         function()
@@ -1304,43 +1224,34 @@ function SaveManager:BuildConfigSection(Tab: any)
         end
     )
 
-    --// Remove Autoload
+    --// 7. Remove Autoload
     ConfigurationBox:AddButton(
         "Remove Autoload",
         function()
-            Confirm(
-                "SaveManager_RemoveAutoload",
-                "Remove autoload",
-                "Are you sure you want to remove the current autoload config?",
+            local Success, ErrorMessage =
+                SaveManager:DeleteAutoLoadConfig()
 
-                "Remove",
-
-                function()
-                    local Success, ErrorMessage =
-                        SaveManager:DeleteAutoLoadConfig()
-
-                    if not Success then
-                        Notify(
-                            string.format(
-                                "Failed to remove autoload config: %s",
-                                ErrorMessage
-                            )
-                        )
-
-                        return
-                    end
-
-                    Notify(
-                        "Successfully removed autoload config."
+            if not Success then
+                Notify(
+                    string.format(
+                        "Failed to remove autoload config: %s",
+                        ErrorMessage
                     )
+                )
 
-                    RefreshList()
-                    RefreshAutoload()
-                end
+                return
+            end
+
+            Notify(
+                "Successfully removed autoload config."
             )
+
+            RefreshList()
+            RefreshAutoload()
         end
     )
 
+    --// 8. Autoload Label
     AutoloadLabel =
         ConfigurationBox:AddLabel(
             "Autoload: None",
