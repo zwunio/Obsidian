@@ -1268,7 +1268,7 @@ function SaveManager:BuildConfigSection(Tab: any)
         ConfigurationBox:AddDropdown(
             "SaveManager_AutoloadList",
             {
-                Text = "Autoload Config",
+                Text = "Autoload List",
 
                 Values =
                     SaveManager:RefreshConfigList(),
