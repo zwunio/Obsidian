@@ -550,7 +550,6 @@ function SaveManager:RefreshConfigList()
             continue
         end
 
-        -- FIXED: Added the backslash that was stripped by the web scraper
         local NormalizedPath = RawFileName:gsub("\\", "/")
         local FileName = NormalizedPath:match(".*/([^/]*)$")
 
@@ -1002,32 +1001,57 @@ function SaveManager:BuildConfigSection(Tab: any)
 
     local ConfigNameInput
     local ConfigList
-    local AutoloadLabel
+    local AutoloadToggle
+    local AutoloadList
+
+    local InternalAutoloadUpdate = false
 
     local function Notify(Message)
         SaveManager.Library:Notify(Message)
     end
 
     local function RefreshList()
-        ConfigList:SetValues(
-            SaveManager:RefreshConfigList()
-        )
+        local Configs = SaveManager:RefreshConfigList()
 
+        ConfigList:SetValues(Configs)
         ConfigList:SetValue(nil)
+
+        if AutoloadList then
+            local CurrentAutoload = AutoloadList.Value
+
+            InternalAutoloadUpdate = true
+
+            AutoloadList:SetValues(Configs)
+
+            if CurrentAutoload
+                and table.find(Configs, CurrentAutoload) then
+                AutoloadList:SetValue(CurrentAutoload)
+            else
+                AutoloadList:SetValue(nil)
+            end
+
+            InternalAutoloadUpdate = false
+        end
     end
 
-    local function RefreshAutoload()
+    local function RefreshAutoloadUI()
         local Name = SaveManager:GetAutoloadConfig()
+        local Configs = SaveManager:RefreshConfigList()
 
-        if Name and Name ~= "none" then
-            AutoloadLabel:SetText(
-                "Autoload: " .. Name
-            )
+        InternalAutoloadUpdate = true
+
+        AutoloadList:SetValues(Configs)
+
+        if Name and Name ~= "none"
+            and table.find(Configs, Name) then
+            AutoloadList:SetValue(Name)
+            AutoloadToggle:SetValue(true)
         else
-            AutoloadLabel:SetText(
-                "Autoload: None"
-            )
+            AutoloadList:SetValue(nil)
+            AutoloadToggle:SetValue(false)
         end
+
+        InternalAutoloadUpdate = false
     end
 
     --// 1. Name
@@ -1050,23 +1074,7 @@ function SaveManager:BuildConfigSection(Tab: any)
                     SaveManager:RefreshConfigList(),
 
                 AllowNull = true,
-                Multi = false,
-
-                FormatDisplayValue = function(Value)
-                    if Value == SaveManager.AutoloadConfig then
-                        return Value .. " (autoload)"
-                    end
-
-                    return Value
-                end,
-
-                FormatListValue = function(Value)
-                    if Value == SaveManager.AutoloadConfig then
-                        return Value .. " (autoload)"
-                    end
-
-                    return Value
-                end
+                Multi = false
             }
         )
 
@@ -1182,88 +1190,146 @@ function SaveManager:BuildConfigSection(Tab: any)
             )
 
             RefreshList()
-            RefreshAutoload()
+            RefreshAutoloadUI()
         end
     )
 
-    --// 6. Set As Autoload
-    ConfigurationBox:AddButton(
-        "Set As Autoload",
-        function()
-            local Name = ConfigList.Value
+    --// 6. Autoload Toggle
+    AutoloadToggle =
+        ConfigurationBox:AddToggle(
+            "SaveManager_AutoloadEnabled",
+            {
+                Text = "Autoload",
+                Default = false,
 
-            if IsStringEmpty(Name) then
-                Notify("Please select a config first.")
-                return
-            end
+                Callback = function(Value)
+                    if InternalAutoloadUpdate then
+                        return
+                    end
 
-            local Success, ErrorMessage =
-                SaveManager:SaveAutoloadConfig(Name)
+                    if Value then
+                        local Name = AutoloadList.Value
 
-            if not Success then
-                Notify(
-                    string.format(
-                        "Failed to set autoload config %q: %s",
-                        Name,
-                        ErrorMessage
+                        if IsStringEmpty(Name) then
+                            Notify("Select a config to autoload first.")
+
+                            InternalAutoloadUpdate = true
+                            AutoloadToggle:SetValue(false)
+                            InternalAutoloadUpdate = false
+
+                            return
+                        end
+
+                        local Success, ErrorMessage =
+                            SaveManager:SaveAutoloadConfig(Name)
+
+                        if not Success then
+                            Notify(
+                                string.format(
+                                    "Failed to enable autoload for %q: %s",
+                                    Name,
+                                    ErrorMessage
+                                )
+                            )
+
+                            InternalAutoloadUpdate = true
+                            AutoloadToggle:SetValue(false)
+                            InternalAutoloadUpdate = false
+
+                            return
+                        end
+
+                        Notify(
+                            string.format(
+                                "Autoload enabled for %q",
+                                Name
+                            )
+                        )
+                    else
+                        local Success, ErrorMessage =
+                            SaveManager:DeleteAutoLoadConfig()
+
+                        if not Success
+                            and ErrorMessage ~= "Autoload config is not set" then
+                            Notify(
+                                string.format(
+                                    "Failed to disable autoload: %s",
+                                    ErrorMessage
+                                )
+                            )
+                        end
+                    end
+                end
+            }
+        )
+
+    --// 7. Autoload Config Dropdown
+    AutoloadList =
+        ConfigurationBox:AddDropdown(
+            "SaveManager_AutoloadList",
+            {
+                Text = "Autoload Config",
+
+                Values =
+                    SaveManager:RefreshConfigList(),
+
+                AllowNull = true,
+                Multi = false,
+
+                Callback = function(Value)
+                    if InternalAutoloadUpdate then
+                        return
+                    end
+
+                    if IsStringEmpty(Value) then
+                        if AutoloadToggle.Value then
+                            InternalAutoloadUpdate = true
+                            AutoloadToggle:SetValue(false)
+                            InternalAutoloadUpdate = false
+
+                            SaveManager:DeleteAutoLoadConfig()
+                        end
+
+                        return
+                    end
+
+                    if not AutoloadToggle.Value then
+                        return
+                    end
+
+                    local Success, ErrorMessage =
+                        SaveManager:SaveAutoloadConfig(Value)
+
+                    if not Success then
+                        Notify(
+                            string.format(
+                                "Failed to set autoload config %q: %s",
+                                Value,
+                                ErrorMessage
+                            )
+                        )
+
+                        return
+                    end
+
+                    Notify(
+                        string.format(
+                            "Autoload config set to %q",
+                            Value
+                        )
                     )
-                )
-
-                return
-            end
-
-            Notify(
-                string.format(
-                    "Successfully set %q as autoload",
-                    Name
-                )
-            )
-
-            RefreshList()
-            RefreshAutoload()
-        end
-    )
-
-    --// 7. Remove Autoload
-    ConfigurationBox:AddButton(
-        "Remove Autoload",
-        function()
-            local Success, ErrorMessage =
-                SaveManager:DeleteAutoLoadConfig()
-
-            if not Success then
-                Notify(
-                    string.format(
-                        "Failed to remove autoload config: %s",
-                        ErrorMessage
-                    )
-                )
-
-                return
-            end
-
-            Notify(
-                "Successfully removed autoload config."
-            )
-
-            RefreshList()
-            RefreshAutoload()
-        end
-    )
-
-    --// 8. Autoload Label
-    AutoloadLabel =
-        ConfigurationBox:AddLabel(
-            "Autoload: None",
-            true
+                end
+            }
         )
 
     SaveManager:SetIgnoreIndexes({
         "SaveManager_ConfigName",
-        "SaveManager_ConfigList"
+        "SaveManager_ConfigList",
+        "SaveManager_AutoloadEnabled",
+        "SaveManager_AutoloadList"
     })
 
-    RefreshAutoload()
+    RefreshAutoloadUI()
 
     return ConfigurationBox
 end
