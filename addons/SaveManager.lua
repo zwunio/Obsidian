@@ -923,42 +923,14 @@ function SaveManager:SaveAutoloadConfig(
 end
 
 function SaveManager:LoadAutoloadConfig()
-    local ConfigName, Success, ErrorMessage =
+    local ConfigName, Success =
         SaveManager:GetAutoloadConfig()
 
-    if not Success or ErrorMessage then
-        if ErrorMessage ~= "Autoload config is not set" then
-            SaveManager.Library:Notify(
-                string.format(
-                    "Failed to load autoload config: %s",
-                    ErrorMessage
-                )
-            )
-        end
-
+    if not Success then
         return
     end
 
-    local SuccessLoad, LoadErrorMessage =
-        SaveManager:Load(ConfigName)
-
-    if not SuccessLoad then
-        SaveManager.Library:Notify(
-            string.format(
-                "Failed to load autoload config: %s",
-                LoadErrorMessage
-            )
-        )
-
-        return
-    end
-
-    SaveManager.Library:Notify(
-        string.format(
-            "Successfully loaded autoload config %q",
-            ConfigName
-        )
-    )
+    SaveManager:Load(ConfigName)
 end
 
 function SaveManager:DeleteAutoLoadConfig()
@@ -1005,10 +977,6 @@ function SaveManager:BuildConfigSection(Tab: any)
     local AutoloadList
 
     local InternalAutoloadUpdate = false
-
-    local function Notify(Message)
-        SaveManager.Library:Notify(Message)
-    end
 
     local function RefreshList()
         local Configs = SaveManager:RefreshConfigList()
@@ -1090,36 +1058,18 @@ function SaveManager:BuildConfigSection(Tab: any)
             local Name = ConfigNameInput.Value
 
             if IsStringEmpty(Name) then
-                Notify("Configuration name cannot be empty.")
                 return
             end
 
             if string.lower(Name) == "autoload" then
-                Notify("Invalid config name provided.")
                 return
             end
 
-            local Success, ErrorMessage =
-                SaveManager:Save(Name)
+            local Success = SaveManager:Save(Name)
 
             if not Success then
-                Notify(
-                    string.format(
-                        "Failed to save config %q: %s",
-                        Name,
-                        ErrorMessage
-                    )
-                )
-
                 return
             end
-
-            Notify(
-                string.format(
-                    "Successfully saved config %q",
-                    Name
-                )
-            )
 
             RefreshList()
             ConfigList:SetValue(Name)
@@ -1133,31 +1083,10 @@ function SaveManager:BuildConfigSection(Tab: any)
             local Name = ConfigList.Value
 
             if IsStringEmpty(Name) then
-                Notify("Please select a config first.")
                 return
             end
 
-            local Success, ErrorMessage =
-                SaveManager:Load(Name)
-
-            if not Success then
-                Notify(
-                    string.format(
-                        "Failed to load config %q: %s",
-                        Name,
-                        ErrorMessage
-                    )
-                )
-
-                return
-            end
-
-            Notify(
-                string.format(
-                    "Successfully loaded config %q",
-                    Name
-                )
-            )
+            SaveManager:Load(Name)
         end
     )
 
@@ -1168,31 +1097,14 @@ function SaveManager:BuildConfigSection(Tab: any)
             local Name = ConfigList.Value
 
             if IsStringEmpty(Name) then
-                Notify("Please select a config first.")
                 return
             end
 
-            local Success, ErrorMessage =
-                SaveManager:Delete(Name)
+            local Success = SaveManager:Delete(Name)
 
             if not Success then
-                Notify(
-                    string.format(
-                        "Failed to delete config %q: %s",
-                        Name,
-                        ErrorMessage
-                    )
-                )
-
                 return
             end
-
-            Notify(
-                string.format(
-                    "Successfully deleted config %q",
-                    Name
-                )
-            )
 
             RefreshList()
             RefreshAutoloadUI()
@@ -1205,8 +1117,6 @@ function SaveManager:BuildConfigSection(Tab: any)
         function()
             RefreshList()
             RefreshAutoloadUI()
-
-            Notify("Config list refreshed.")
         end
     )
 
@@ -1227,8 +1137,6 @@ function SaveManager:BuildConfigSection(Tab: any)
                         local Name = AutoloadList.Value
 
                         if IsStringEmpty(Name) then
-                            Notify("Select a config to autoload first.")
-
                             InternalAutoloadUpdate = true
                             AutoloadToggle:SetValue(false)
                             InternalAutoloadUpdate = false
@@ -1236,44 +1144,18 @@ function SaveManager:BuildConfigSection(Tab: any)
                             return
                         end
 
-                        local Success, ErrorMessage =
+                        local Success =
                             SaveManager:SaveAutoloadConfig(Name)
 
                         if not Success then
-                            Notify(
-                                string.format(
-                                    "Failed to enable autoload for %q: %s",
-                                    Name,
-                                    ErrorMessage
-                                )
-                            )
-
                             InternalAutoloadUpdate = true
                             AutoloadToggle:SetValue(false)
                             InternalAutoloadUpdate = false
 
                             return
                         end
-
-                        Notify(
-                            string.format(
-                                "Autoload enabled for %q",
-                                Name
-                            )
-                        )
                     else
-                        local Success, ErrorMessage =
-                            SaveManager:DeleteAutoLoadConfig()
-
-                        if not Success
-                            and ErrorMessage ~= "Autoload config is not set" then
-                            Notify(
-                                string.format(
-                                    "Failed to disable autoload: %s",
-                                    ErrorMessage
-                                )
-                            )
-                        end
+                        SaveManager:DeleteAutoLoadConfig()
                     end
                 end
             }
@@ -1313,27 +1195,7 @@ function SaveManager:BuildConfigSection(Tab: any)
                         return
                     end
 
-                    local Success, ErrorMessage =
-                        SaveManager:SaveAutoloadConfig(Value)
-
-                    if not Success then
-                        Notify(
-                            string.format(
-                                "Failed to set autoload config %q: %s",
-                                Value,
-                                ErrorMessage
-                            )
-                        )
-
-                        return
-                    end
-
-                    Notify(
-                        string.format(
-                            "Autoload config set to %q",
-                            Value
-                        )
-                    )
+                    SaveManager:SaveAutoloadConfig(Value)
                 end
             }
         )
