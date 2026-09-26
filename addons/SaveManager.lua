@@ -550,7 +550,7 @@ function SaveManager:RefreshConfigList()
             continue
         end
 
-        local NormalizedPath = RawFileName:gsub("\\", "/")
+        local NormalizedPath = RawFileName:gsub("", "/")
         local FileName = NormalizedPath:match(".*/([^/]*)$")
 
         if not FileName then
@@ -1076,60 +1076,6 @@ function SaveManager:BuildConfigSection(Tab: any)
             }
         )
 
-    --// Create
-    ConfigurationBox:AddButton(
-        "Create",
-        function()
-            local Name = ConfigNameInput.Value
-
-            if IsStringEmpty(Name) then
-                Notify("Configuration name cannot be empty.")
-                return
-            end
-
-            if string.lower(Name) == "autoload" then
-                Notify("Invalid config name provided.")
-                return
-            end
-
-            if DoesConfigExist(Name) then
-                Notify(
-                    string.format(
-                        "Config %q already exists. Use Save to overwrite it.",
-                        Name
-                    )
-                )
-
-                return
-            end
-
-            local Success, ErrorMessage =
-                SaveManager:Save(Name)
-
-            if not Success then
-                Notify(
-                    string.format(
-                        "Failed to create config %q: %s",
-                        Name,
-                        ErrorMessage
-                    )
-                )
-
-                return
-            end
-
-            Notify(
-                string.format(
-                    "Successfully created config %q",
-                    Name
-                )
-            )
-
-            RefreshList()
-            ConfigList:SetValue(Name)
-        end
-    )
-
     --// List
     ConfigList =
         ConfigurationBox:AddDropdown(
@@ -1210,27 +1156,33 @@ function SaveManager:BuildConfigSection(Tab: any)
         end
     )
 
-    --// Save
+    --// Save (Creates or Overwrites)
     ConfigurationBox:AddButton(
         "Save",
         function()
-            local Name = ConfigList.Value
+            local Name = ConfigNameInput.Value
 
             if IsStringEmpty(Name) then
-                Notify("Please select a config first.")
+                Notify("Configuration name cannot be empty.")
                 return
             end
 
+            if string.lower(Name) == "autoload" then
+                Notify("Invalid config name provided.")
+                return
+            end
+
+            local IsExisting = DoesConfigExist(Name)
+            local ActionText = IsExisting and "Overwrite" or "Create"
+            local Description = IsExisting 
+                and string.format("Are you sure you want to overwrite %q with your current settings?", Name)
+                or string.format("Are you sure you want to create a new config named %q?", Name)
+
             Confirm(
                 "SaveManager_SaveConfig",
-                "Save config",
-
-                string.format(
-                    "Are you sure you want to overwrite %q with your current settings?",
-                    Name
-                ),
-
-                "Save",
+                ActionText .. " config",
+                Description,
+                ActionText,
 
                 function()
                     local Success, ErrorMessage =
@@ -1254,6 +1206,9 @@ function SaveManager:BuildConfigSection(Tab: any)
                             Name
                         )
                     )
+
+                    RefreshList()
+                    ConfigList:SetValue(Name)
                 end
             )
         end
