@@ -1047,8 +1047,13 @@ function SaveManager:BuildConfigSection(Tab: any)
             AutoloadList:SetValue(Name)
             AutoloadToggle:SetValue(true)
         else
-            AutoloadList:SetValue(nil)
             AutoloadToggle:SetValue(false)
+
+            local Current = AutoloadList.Value
+
+            if not (Current and table.find(Configs, Current)) then
+                AutoloadList:SetValue(nil)
+            end
         end
 
         InternalAutoloadUpdate = false
@@ -1194,7 +1199,18 @@ function SaveManager:BuildConfigSection(Tab: any)
         end
     )
 
-    --// 6. Autoload Toggle
+    --// 6. Refresh
+    ConfigurationBox:AddButton(
+        "Refresh",
+        function()
+            RefreshList()
+            RefreshAutoloadUI()
+
+            Notify("Config list refreshed.")
+        end
+    )
+
+    --// 7. Autoload Toggle
     AutoloadToggle =
         ConfigurationBox:AddToggle(
             "SaveManager_AutoloadEnabled",
@@ -1263,7 +1279,7 @@ function SaveManager:BuildConfigSection(Tab: any)
             }
         )
 
-    --// 7. Autoload Config Dropdown
+    --// 8. Autoload List Dropdown
     AutoloadList =
         ConfigurationBox:AddDropdown(
             "SaveManager_AutoloadList",
