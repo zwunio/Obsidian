@@ -10396,6 +10396,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:AddGroupbox(Info)
+            if WindowInfo.DisableCollapsing == true then
+                Info.DisableCollapsing = true
+            end
+
             if typeof(Info.Side) == "string" then
                 local lowerSide = string.lower(Info.Side)
                 if not SideIndex[lowerSide] then
@@ -10403,7 +10407,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 Info.Side = SideIndex[lowerSide]
-            end
+                                                        end
 
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
