@@ -9017,7 +9017,7 @@ function Library:CreateWindow(WindowInfo)
         until ViewportSize.X > 5 and ViewportSize.Y > 5
     end
 
-    local MaxX = ViewportSize.X - 64
+    local MaxX = ViewportSize.X - 32
     local MaxY = ViewportSize.Y - 64
 
     Library.OriginalMinSize =
